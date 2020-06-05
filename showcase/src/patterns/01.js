@@ -1,4 +1,5 @@
 import React, { useState, Component } from "react";
+import mojs from "mo-js";
 import styles from "./index.css";
 
 const initialClapState = {
@@ -7,27 +8,44 @@ const initialClapState = {
   isClicked: false,
 };
 
-const MAX_USER_CLAP = 5;
+const MAX_USER_CLAP = 15;
 
 /**
  * Higher order Component
  */
 const withClapAnimation = (WrappedComponent) => {
   class WithClapAnimation extends Component {
-    // this handle animation logic
-    animate = () => {
-      console.log("%c Animate", "background: yellow; color: red");
+    animationTimeline = new mojs.Timeline();
+    state = {
+      animationTimeline: this.animationTimeline,
     };
 
+    componentDidMount() {
+      const scaleButton = new mojs.Html({
+        el: "#clap",
+        duration: 300,
+        scale: { 1.3: 1 },
+        easing: mojs.easing.ease.out,
+      });
+      const newAnimationTimeline = this.animationTimeline.add([scaleButton]);
+      this.setState({ animationTimeline: newAnimationTimeline });
+    }
+
     render() {
-      return <WrappedComponent {...this.props} animate={this.animate} />;
+      const { animationTimeline } = this.state;
+      return (
+        <WrappedComponent
+          {...this.props}
+          animationTimeline={animationTimeline}
+        />
+      );
     }
   }
 
   return WithClapAnimation;
 };
 
-const MediumClap = ({ animate }) => {
+const MediumClap = ({ animationTimeline }) => {
   const [clapState, setClapState] = useState(initialClapState);
   const { count, countTotal, isClicked } = clapState;
 
@@ -44,11 +62,11 @@ const MediumClap = ({ animate }) => {
       countTotal: count + 1 < MAX_USER_CLAP ? countTotal + 1 : countTotal,
       isClicked: true,
     });
-    animate();
+    animationTimeline.replay();
   };
 
   return (
-    <button className={styles.clap} onClick={handleClapClick}>
+    <button id="clap" className={styles.clap} onClick={handleClapClick}>
       <ClapIcon isClicked={isClicked} />
       <ClapCount count={count} />
       <ClapTotal countTotal={countTotal} />

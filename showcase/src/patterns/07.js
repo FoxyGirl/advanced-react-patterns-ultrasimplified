@@ -137,6 +137,7 @@ const useClapState = (
   MAX_USER_CLAP = 10
 ) => {
   const [clapState, setClapState] = useState(initialClapState);
+  const { count } = clapState;
 
   const updateClapState = useCallback(() => {
     setClapState(({ count, countTotal }) => ({
@@ -146,7 +147,22 @@ const useClapState = (
     }));
   }, []);
 
-  return [clapState, updateClapState];
+  // accesibility
+  // props collection for 'click'
+  const togglerProps = {
+    onClick: updateClapState,
+    "aria-pressed": clapState.isClicked,
+  };
+
+  // props collection for 'count'
+  const counterProps = {
+    count,
+    "aria-valuemax": MAX_USER_CLAP,
+    "aria-valuemin": 0,
+    "aria-valuenow": count,
+  };
+
+  return { clapState, togglerProps, counterProps };
 };
 
 /**
@@ -164,39 +180,22 @@ const useEffectAfterMount = (cb, deps) => {
   }, deps);
 };
 
-const MediumClap = () => {
-  const [clapState, updateClapState] = useClapState();
-  const { count, countTotal, isClicked } = clapState;
-
-  const [{ clapRef, clapCountRef, clapTotalRef }, setRef] = useDOMRefs();
-
-  const animationTimeline = useClapAnimation({
-    clapEl: clapRef,
-    clapCountEl: clapCountRef,
-    clapTotalEl: clapTotalRef,
-  });
-
-  useEffectAfterMount(() => {
-    animationTimeline.replay();
-  }, [count]);
-
-  return (
-    <button
-      ref={setRef}
-      data-refkey="clapRef"
-      className={styles.clap}
-      onClick={updateClapState}
-    >
-      <ClapIcon isClicked={isClicked} />
-      <ClapCount setRef={setRef} count={count} />
-      <ClapTotal setRef={setRef} countTotal={countTotal} />
-    </button>
-  );
-};
-
 /**
  * subcomponents
  */
+
+const ClapContainer = ({ children, setRef, handleClick, ...restProps }) => {
+  return (
+    <button
+      ref={setRef}
+      className={styles.clap}
+      onClick={handleClick}
+      {...restProps}
+    >
+      {children}
+    </button>
+  );
+};
 
 const ClapIcon = ({ isClicked }) => (
   <span>
@@ -212,26 +211,51 @@ const ClapIcon = ({ isClicked }) => (
   </span>
 );
 
-const ClapCount = ({ count, setRef }) => (
-  <span ref={setRef} data-refkey="clapCountRef" className={styles.count}>
+const ClapCount = ({ count, setRef, ...restProps }) => (
+  <span ref={setRef} className={styles.count} {...restProps}>
     + {count}
   </span>
 );
 
-const ClapTotal = ({ countTotal, setRef }) => (
-  <span ref={setRef} data-refkey="clapTotalRef" className={styles.total}>
+const ClapTotal = ({ countTotal, setRef, ...restProps }) => (
+  <span ref={setRef} className={styles.total} {...restProps}>
     {countTotal}
   </span>
 );
-
-// export default MediumClap;
 
 /**
  * Usage
  */
 
 const Usage = () => {
-  return <MediumClap />;
+  const { clapState, togglerProps, counterProps } = useClapState();
+  const { count, countTotal, isClicked } = clapState;
+
+  const [{ clapRef, clapCountRef, clapTotalRef }, setRef] = useDOMRefs();
+
+  const animationTimeline = useClapAnimation({
+    clapEl: clapRef,
+    clapCountEl: clapCountRef,
+    clapTotalEl: clapTotalRef,
+  });
+
+  useEffectAfterMount(() => {
+    animationTimeline.replay();
+  }, [count]);
+
+  return (
+    <ClapContainer setRef={setRef} data-refkey="clapRef" {...togglerProps}>
+      <ClapIcon isClicked={isClicked} />
+      {/* 🔥 */}
+      <div {...counterProps}>{count}</div>
+      <ClapCount setRef={setRef} data-refkey="clapCountRef" {...counterProps} />
+      <ClapTotal
+        setRef={setRef}
+        countTotal={countTotal}
+        data-refkey="clapTotalRef"
+      />
+    </ClapContainer>
+  );
 };
 
 export default Usage;
